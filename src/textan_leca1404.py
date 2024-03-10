@@ -47,7 +47,7 @@ class TextAn(TextAnCommon):
     """
 
     # Signes de ponctuation à retirer (compléter cette liste incomplète)
-    PONC = ["!"]
+    PONC = ["!", ".", ","]
 
     def __init__(self) -> None:
         """Initialize l'objet de type TextAn lorsqu'il est créé
@@ -253,7 +253,20 @@ class TextAn(TextAnCommon):
 
         # Ces trois lignes ne servent qu'à éliminer un avertissement. Il faut les retirer lorsque le code est complété
         ngram = self.get_empty_ngram(2)
-        print(ngram)
-        print(self.auteurs)
+        for auteur in self.auteurs:
+            files = self.get_aut_files(auteur)
+            for file in files:
+                try:
+                    f = open(file, "r")
+                    content = f.read()
+                    words = content.split(" ")
+                    for word in words:
+
+                finally:
+                    f.close()
+
+
+
+
 
         return
