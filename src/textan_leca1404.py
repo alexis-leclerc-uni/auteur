@@ -23,7 +23,8 @@
 """
 
 from textan_common import TextAnCommon
-
+import re
+import operator
 
 class TextAn(TextAnCommon):
     """Classe à utiliser pour coder la solution à la problématique :
@@ -47,7 +48,7 @@ class TextAn(TextAnCommon):
     """
 
     # Signes de ponctuation à retirer (compléter cette liste incomplète)
-    PONC = ["!", ".", ","]
+    PONC = ["!", "--", ".", ",", ";", "_"]
 
     def __init__(self) -> None:
         """Initialize l'objet de type TextAn lorsqu'il est créé
@@ -224,9 +225,11 @@ class TextAn(TextAnCommon):
         """
         # Les lignes suivantes ne servent qu'à éliminer un avertissement.
         # Il faut les retirer lorsque le code est complété
-        print(self.auteurs, auteur, n)
-        ngram = [["un", "roman"]]  # Exemple du format de sortie d'un bigramme
-        return ngram
+        if auteur in self.mots_auteurs.keys():
+            try:
+                return self.mots_auteurs[auteur][n-1]
+            except IndexError:
+                return 0
 
     def analyze(self) -> None:
         """Fait l'analyse des textes fournis, en traitant chaque oeuvre de chaque auteur
@@ -252,21 +255,32 @@ class TextAn(TextAnCommon):
         #   les mots d'une très longue oeuvre du même auteur. Ce n'est PAS ce qui vous est demandé ici.
 
         # Ces trois lignes ne servent qu'à éliminer un avertissement. Il faut les retirer lorsque le code est complété
-        ngram = self.get_empty_ngram(2)
         for auteur in self.auteurs:
             files = self.get_aut_files(auteur)
+            ngram_dict = { }
             for file in files:
                 try:
                     f = open(file, "r")
                     content = f.read()
+                    if not self.keep_ponc:
+                        escaped_ponc = [re.escape(char) for char in self.PONC]
+                        ponc_string = "".join(escaped_ponc)
+                        # replacement of punctuation
+                        content = re.sub(rf"["+ponc_string+"]", "", content)
+                        # replacement of \n
+                        content = re.sub(r"\n+", " ", content)
                     words = content.split(" ")
-                    for word in words:
+                    words = list(filter(None, words))
+                    num_words = len(words)
+                    for num in range(0, num_words):
+                        ngram = " ".join(words[num:num+(self.ngram)])
+                        if ngram in ngram_dict:
+                            ngram_dict[ngram] += 1
+                        else:
+                            ngram_dict[ngram] = 1
 
                 finally:
                     f.close()
-
-
-
-
-
+            ngram_dict = sorted(ngram_dict.items(), key=operator.itemgetter(1))[::-1]
+            self.mots_auteurs[auteur] = ngram_dict
         return
