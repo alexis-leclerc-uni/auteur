@@ -76,9 +76,8 @@ class TextAn(TextAnCommon):
     # La fonction analyse() est appelée en premier par test_textan.py
     # Ensuite, selon ce qui est demandé, les fonctions find_author(), gen_text() ou get_nth_element() sont appelées
 
-    @staticmethod
     def dot_product_dict(
-        dict1: dict, dict2: dict, dict1_size: int, dict2_size: int
+        self, dict1: dict, dict2: dict, dict1_size: int, dict2_size: int
     ) -> float:
         """Calcule le produit scalaire NORMALISÉ de deux vecteurs représentés par des dictionnaires
 
@@ -99,11 +98,7 @@ class TextAn(TextAnCommon):
             if key in dict2.keys():
                 sum = dict1[key] * dict2[key]
                 dot_product += sum
-
-        norme1 = self.norme(dict1)
-        norme2 = self.norme(dict2)
-
-        return dot_product
+        return dot_product / (self.norme(dict1) * self.norme(dict2))
 
     def norme(self, dict: dict) -> float:
         somme_carre = 0
