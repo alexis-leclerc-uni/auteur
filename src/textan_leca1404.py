@@ -21,6 +21,7 @@
 
     Copyright 2018-2023, F. Mailhot et Université de Sherbrooke
 """
+import math
 
 from textan_common import TextAnCommon
 import re
@@ -94,12 +95,21 @@ class TextAn(TextAnCommon):
         # Les lignes qui suivent ne servent qu'à éliminer un avertissement.
         # Il faut les retirer et les remplacer par du code fonctionnel
         dot_product = 0
-        for key in dict1:
-            if key in dict2:
-                hash = dict1[key].__hash__()
-                dot_product += pow(hash, 2)
+        for key in dict1.keys():
+            if key in dict2.keys():
+                sum = dict1[key] * dict2[key]
+                dot_product += sum
+
+        norme1 = self.norme(dict1)
+        norme2 = self.norme(dict2)
 
         return dot_product
+
+    def norme(self, dict: dict) -> float:
+        somme_carre = 0
+        for key in dict.keys():
+            somme_carre += dict[key] ** 2
+        return math.sqrt(somme_carre)
 
     def dot_product_aut(self, auteur1: str, auteur2: str) -> float:
         """Calcule le produit scalaire normalisé entre les oeuvres de deux auteurs, en utilisant dot_product_dict()
@@ -117,10 +127,18 @@ class TextAn(TextAnCommon):
         # Les lignes qui suivent ne servent qu'à éliminer un avertissement.
         # Il faut les retirer et les remplacer par du code fonctionnel
         dot_product = 0.0
-        print(self)
+
         if auteur1 == auteur2:
             print(auteur1, auteur2)
             dot_product = 1.0
+        else:
+            try:
+                dict1 = self.mots_auteurs[auteur1]
+                dict2 = self.mots_auteurs[auteur2]
+                dot_product = self.dot_product_dict(dict1, dict2, len(dict1), len(dict2))
+            except TypeError:
+                print("erreur")
+
         return dot_product
 
     def dot_product_dict_aut(self, dict_oeuvre: dict, auteur: str) -> float:
@@ -139,12 +157,8 @@ class TextAn(TextAnCommon):
 
         # Les lignes qui suivent ne servent qu'à éliminer un avertissement.
         # Il faut les retirer et les remplacer par du code fonctionnel
-        dot_product = 0.0
-        print(self)
-        if auteur in dict_oeuvre:
-            print(dict_oeuvre)
-            print(auteur)
-            dot_product = 1.0
+        dict1 = self.mots_auteurs[auteur]
+        dot_product = self.dot_product_dict(dict1, dict_oeuvre, len(dict1), len(dict_oeuvre))
         return dot_product
 
     def find_author(self, oeuvre: str) -> []:
@@ -162,17 +176,22 @@ class TextAn(TextAnCommon):
 
         # Les lignes suivantes ne servent qu'à éliminer un avertissement.
         # Il faut les retirer lorsque le code est complété
-        print(self.auteurs, oeuvre)
-        resultats = [
-            ("Premier_auteur", 0.1234),
-            ("Deuxième_auteur", 0.1123),
-        ]  # Exemple du format des sorties
 
-        # Ajouter votre code pour déterminer la proximité du fichier passé en paramètre avec chacun des auteurs
-        # Retourner la liste des auteurs, chacun avec sa proximité au fichier inconnu
-        # Plus la proximité est grande, plus proche l'oeuvre inconnue est des autres écrits d'un auteur
-        #   Le produit scalaire entre le vecteur représentant les oeuvres d'un auteur
-        #       et celui associé au texte inconnu pourrait s'avérer intéressant...
+        # pour commencer, on cuisine le vecteur du texte en paramètre
+
+        f = open(oeuvre, "r")
+        content = f.read()
+        ngram_dict = {}
+        ngram_dict = self.get_dict_from_string(content, ngram_dict)
+        ngram_dict = dict(sorted(ngram_dict.items(), key=operator.itemgetter(1))[::-1])
+
+        resultats = []
+
+        for auteur in self.mots_auteurs.keys():
+            dot_prod = self.dot_product_dict_aut(ngram_dict, auteur)
+            resultats.append([auteur, dot_prod])
+
+
         #   Le produit scalaire devrait être normalisé avec la taille du vecteur associé au texte inconnu :
         #   proximité = (A dot product B) / (|A| |B|)   où A est le vecteur du texte inconnu et B est celui d'un auteur,
         #           "dot product" est le produit scalaire, et |X| est la norme (longueur) du vecteur X
@@ -241,19 +260,6 @@ class TextAn(TextAnCommon):
             void : ne retourne rien, toute l'information extraite est conservée dans des structures internes
         """
 
-        # Ajouter votre code ici pour traiter l'ensemble des oeuvres de l'ensemble des auteurs
-        # Pour l'analyse :  faire le calcul des fréquences de n-grammes pour l'ensemble des oeuvres
-        #   d'un certain auteur, sans distinction des oeuvres individuelles,
-        #       et recommencer ce calcul pour chacun des auteurs
-        #   En procédant ainsi, les oeuvres comprenant plus de mots auront un impact plus grand sur
-        #   les statistiques globales d'un auteur.
-        # Il serait possible de considérer chacune des oeuvres d'un auteur comme ayant un poids identique.
-        #   Pour ce faire, il faudrait faire les calculs de fréquence pour chacune des oeuvres
-        #       de façon indépendante, pour ensuite les normaliser (diviser chaque vecteur par sa norme),
-        #       avant de les additionner pour obtenir le vecteur complet d'un auteur
-        #   De cette façon, les mots d'un court poème auraient une importance beaucoup plus grande que
-        #   les mots d'une très longue oeuvre du même auteur. Ce n'est PAS ce qui vous est demandé ici.
-
         # Ces trois lignes ne servent qu'à éliminer un avertissement. Il faut les retirer lorsque le code est complété
         for auteur in self.auteurs:
             files = self.get_aut_files(auteur)
@@ -262,25 +268,30 @@ class TextAn(TextAnCommon):
                 try:
                     f = open(file, "r")
                     content = f.read()
-                    if not self.keep_ponc:
-                        escaped_ponc = [re.escape(char) for char in self.PONC]
-                        ponc_string = "".join(escaped_ponc)
-                        # replacement of punctuation
-                        content = re.sub(rf"["+ponc_string+"]", "", content)
-                        # replacement of \n
-                        content = re.sub(r"\n+", " ", content)
-                    words = content.split(" ")
-                    words = list(filter(None, words))
-                    num_words = len(words)
-                    for num in range(0, num_words):
-                        ngram = " ".join(words[num:num+(self.ngram)])
-                        if ngram in ngram_dict:
-                            ngram_dict[ngram] += 1
-                        else:
-                            ngram_dict[ngram] = 1
+                    ngram_dict = self.get_dict_from_string(content, ngram_dict)
 
                 finally:
                     f.close()
-            ngram_dict = sorted(ngram_dict.items(), key=operator.itemgetter(1))[::-1]
+            ngram_dict = dict(sorted(ngram_dict.items(), key=operator.itemgetter(1))[::-1])
             self.mots_auteurs[auteur] = ngram_dict
         return
+
+    def get_dict_from_string(self, content: str, dict: dict) -> dict:
+        if not self.keep_ponc:
+            escaped_ponc = [re.escape(char) for char in self.PONC]
+            ponc_string = "".join(escaped_ponc)
+            # replacement of punctuation
+            content = re.sub(rf"[" + ponc_string + "]", "", content)
+            # replacement of \n
+            content = re.sub(r"\n+", " ", content)
+        words = content.split(" ")
+        words = list(filter(None, words))
+        num_words = len(words)
+        for num in range(0, num_words):
+            ngram = " ".join(words[num:num + (self.ngram)])
+            if ngram in dict:
+                dict[ngram] += 1
+            else:
+                dict[ngram] = 1
+
+        return dict
