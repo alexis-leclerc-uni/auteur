@@ -22,6 +22,7 @@
     Copyright 2018-2023, F. Mailhot et Université de Sherbrooke
 """
 import math
+import random
 
 from textan_common import TextAnCommon
 import re
@@ -209,7 +210,7 @@ class TextAn(TextAnCommon):
 
         return
 
-    def gen_text_auteur(self, auteur: str, taille: int, textname: str) -> None:
+    def gen_text_auteur(self, auteur: str, taille: int, textname: str) -> none:
         """Après analyse des textes d'auteurs connus, produire un texte selon des statistiques d'un auteur
 
         Args :
@@ -220,11 +221,34 @@ class TextAn(TextAnCommon):
         Returns :
             void : ne retourne rien, le texte produit doit être écrit dans le fichier "textname"
         """
+        auteur = "Verne"
 
-        # Ce print ne sert qu'à éliminer un avertissement. Il doit être retiré lorsque le code est complété
-        print(self.auteurs, auteur, taille, textname)
+        auteur_dict = self.mots_auteurs[auteur]
 
-        return
+        texte_gen = ""
+
+        for i in range(0, taille):
+            texte_gen += self.weighted_random_element(auteur_dict)
+            texte_gen += " "
+
+        #write texte_gen to a file named textname
+
+        try:
+            f = open(textname, "w")
+            f.write(texte_gen)
+        finally:
+            f.close()
+        print("Le texte a été écrit")
+
+    def weighted_random_element(self, auteur_dict: dict) -> str:
+        totals = sum(auteur_dict.values())
+        valeur_aleatoire = random.uniform(0, totals)
+        jusqua = 0
+        for choice, weight in auteur_dict.items():
+            jusqua += weight
+            if valeur_aleatoire <= jusqua:
+                return choice
+
 
     def get_nth_element(self, auteur: str, n: int) -> [[str]]:
         """Après analyse des textes d'auteurs connus, retourner le n-ième plus fréquent n-gramme de l'auteur indiqué
